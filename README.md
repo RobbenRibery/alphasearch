@@ -21,8 +21,12 @@ alphasearch/
   alphasearch/                # package code
     ingestion/                # scanning, PDF/image chunking, ingest pipeline
     search/                   # query search service and API response models
+    frontend/                 # shortcut UI result adapters and defaults
     api/                      # FastAPI app for /ingest and /search
     cli/                      # unified CLI and compatibility commands
+  service.py                  # live shortcut search UI on localhost:8765
+  spotlight.py                # macOS Spotlight-style overlay client
+  search_open.py              # macOS Shortcut-friendly open-top-result CLI
   scripts/                    # runnable wrappers
   models/                     # optional local model snapshot, gitignored
   var/lancedb/                # generated LanceDB data, gitignored
@@ -153,6 +157,40 @@ The API exposes two main endpoints:
 
 - `POST /ingest` with `{"folder": "./data", "reset": false, "limit": null}`
 - `POST /search` with `{"query": "research papers about uncertainty", "top_k": 5}`
+
+## Shortcut UI
+
+Run the live local search UI:
+
+```bash
+uv run alphasearch-ui
+```
+
+Then open:
+
+```text
+http://localhost:8765
+```
+
+The shortcut UI defaults to the Qwen LanceDB connection:
+
+```text
+ALPHASEARCH_DB_DIR=./var/lancedb
+ALPHASEARCH_EMBEDDER=qwen
+ALPHASEARCH_TABLE=chunks
+ALPHASEARCH_EMBEDDING_DIM=2048
+```
+
+The UI serves the same local index as the CLI and API, but returns the shortcut
+frontend shape (`images` and `texts`) for live search, the native overlay, and
+macOS Shortcuts. It does not read the old numpy `index_data` format.
+
+Use the macOS clients after the UI service is running:
+
+```bash
+uv run python spotlight.py
+uv run python search_open.py "papers about memory in transformers"
+```
 
 ## Offline Demo Mode
 

@@ -30,8 +30,16 @@ alphasearch = "alphasearch.cli.main:main"
 alphasearch-index = "alphasearch.cli.index_data:main"
 alphasearch-search = "alphasearch.cli.search:main"
 alphasearch-serve = "alphasearch.api.app:main"
+alphasearch-ui = "service:main"
 alphasearch-reset = "alphasearch.cli.reset_index:main"
 alphasearch-download-model = "alphasearch.cli.download_model:main"
+
+[project.optional-dependencies]
+macos-shortcuts = [
+  "pynput>=1.8.1",
+  "pyobjc-framework-Cocoa>=12.1",
+  "rumps>=0.4.0",
+]
 
 [build-system]
 requires = ["hatchling"]

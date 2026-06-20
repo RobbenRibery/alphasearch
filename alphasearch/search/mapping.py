@@ -1,8 +1,9 @@
 """Map LanceDB rows to API response models."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+from alphasearch.models import Modality
 from alphasearch.search.models import RetrievedItem
 
 
@@ -47,6 +48,7 @@ def row_to_retrieved_item(row: dict[str, Any]) -> RetrievedItem:
         absolute_path=absolute_path,
         relative_path=str(row["relative_path"]),
         filename=str(row["filename"]),
+        modality=cast(Modality, row["modality"]),
         chunk_text=row.get("chunk_text"),
         chunk_index=int(row["chunk_index"]),
         page_number=row.get("page_number"),
