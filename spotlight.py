@@ -35,7 +35,7 @@ from AppKit import (
     NSBackingStoreBuffered,
     NSClickGestureRecognizer,
     NSColor,
-    NSFloatingWindowLevel,
+    NSEvent,
     NSFocusRingTypeNone,
     NSFont,
     NSImage,
@@ -44,9 +44,12 @@ from AppKit import (
     NSLineBreakByTruncatingTail,
     NSMakeRect,
     NSPanel,
+    NSPopUpMenuWindowLevel,
     NSScreen,
     NSTextField,
     NSView,
+    NSWindowCollectionBehaviorFullScreenAuxiliary,
+    NSWindowCollectionBehaviorMoveToActiveSpace,
     NSWindowStyleMaskBorderless,
 )
 from Foundation import NSObject, NSTimer
@@ -80,6 +83,37 @@ def search(query):
 
 def open_path(path):
     subprocess.run(["open", path], check=False)
+
+
+def _screen_under_mouse() -> object:
+    """Return the display that currently contains the mouse pointer.
+
+    Returns:
+        The ``NSScreen`` under the cursor, or ``mainScreen`` as a fallback.
+    """
+    mouse = NSEvent.mouseLocation()
+    for screen in NSScreen.screens():
+        frame = screen.frame()
+        max_x = frame.origin.x + frame.size.width
+        max_y = frame.origin.y + frame.size.height
+        if frame.origin.x <= mouse.x <= max_x and frame.origin.y <= mouse.y <= max_y:
+            return screen
+    return NSScreen.mainScreen()
+
+
+def _centered_panel_frame(screen: object) -> object:
+    """Build a panel frame centered on the given display.
+
+    Args:
+        screen: Target ``NSScreen``.
+
+    Returns:
+        Panel frame in global screen coordinates.
+    """
+    frame = screen.frame()
+    x = frame.origin.x + (frame.size.width - W) / 2
+    y = frame.origin.y + (frame.size.height - H) / 2
+    return NSMakeRect(x, y, W, H)
 
 
 class KeyPanel(NSPanel):
@@ -119,17 +153,19 @@ class Controller(NSObject):
     # ----- UI construction -----
     @objc.python_method
     def _build(self):
-        scr = NSScreen.mainScreen().frame()
-        x = (scr.size.width - W) / 2
-        y = scr.size.height * 0.55
-        rect = NSMakeRect(x, y, W, H)
+        rect = _centered_panel_frame(_screen_under_mouse())
         self.win = KeyPanel.alloc().initWithContentRect_styleMask_backing_defer_(
             rect, NSWindowStyleMaskBorderless, NSBackingStoreBuffered, False
         )
-        self.win.setLevel_(NSFloatingWindowLevel)
+        self.win.setLevel_(NSPopUpMenuWindowLevel)
         self.win.setOpaque_(False)
         self.win.setBackgroundColor_(NSColor.clearColor())
         self.win.setHasShadow_(True)
+        self.win.setHidesOnDeactivate_(False)
+        self.win.setCollectionBehavior_(
+            NSWindowCollectionBehaviorMoveToActiveSpace
+            | NSWindowCollectionBehaviorFullScreenAuxiliary
+        )
 
         content = FlippedView.alloc().initWithFrame_(NSMakeRect(0, 0, W, H))
         content.setWantsLayer_(True)
@@ -170,7 +206,9 @@ class Controller(NSObject):
 
     @objc.python_method
     def show(self):
+        self.win.setFrame_display_(_centered_panel_frame(_screen_under_mouse()), True)
         NSApp.activateIgnoringOtherApps_(True)
+        self.win.orderFrontRegardless()
         self.win.makeKeyAndOrderFront_(None)
         self.win.makeFirstResponder_(self.field)
 
