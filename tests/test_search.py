@@ -33,6 +33,7 @@ def test_row_to_retrieved_item_maps_fields() -> None:
             "absolute_path": "/tmp/docs/paper.pdf",
             "relative_path": "docs/paper.pdf",
             "filename": "paper.pdf",
+            "modality": "pdf_text",
             "chunk_text": "hello world",
             "chunk_index": 0,
             "page_number": 3,
@@ -42,6 +43,7 @@ def test_row_to_retrieved_item_maps_fields() -> None:
 
     assert item.id == "chunk-1"
     assert item.file_link.startswith("file://")
+    assert item.modality == "pdf_text"
     assert item.score == 0.9
 
 
@@ -55,6 +57,7 @@ def test_search_composes_embedder_and_store() -> None:
             "absolute_path": "/tmp/docs/paper.pdf",
             "relative_path": "docs/paper.pdf",
             "filename": "paper.pdf",
+            "modality": "pdf_text",
             "chunk_text": "hello world",
             "chunk_index": 0,
             "page_number": 3,
@@ -88,6 +91,7 @@ def test_search_endpoint_returns_results() -> None:
             "absolute_path": "/tmp/docs/paper.pdf",
             "relative_path": "docs/paper.pdf",
             "filename": "paper.pdf",
+            "modality": "pdf_text",
             "chunk_text": "hello world",
             "chunk_index": 0,
             "page_number": 3,

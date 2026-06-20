@@ -1,5 +1,7 @@
 """API models for AlphaSearch ingestion and search endpoints."""
 
+from alphasearch.models import Modality
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -14,6 +16,7 @@ class RetrievedItem(BaseModel):
     absolute_path: str
     relative_path: str
     filename: str
+    modality: Modality
     chunk_text: str | None
     chunk_index: int
     page_number: int | None
