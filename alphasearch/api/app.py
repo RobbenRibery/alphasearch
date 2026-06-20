@@ -12,14 +12,13 @@ from alphasearch.config import load_settings
 from alphasearch.db import LanceDBStore
 from alphasearch.embeddings import create_embedder
 from alphasearch.ingestion.pipeline import IngestContext, ingest as run_ingest
-from alphasearch.search.mapping import row_to_retrieved_item
 from alphasearch.search.models import (
     IngestRequest,
     IngestResponse,
     SearchRequest,
     SearchResponse,
 )
-from alphasearch.search.service import SearchContext, search as run_search
+from alphasearch.search.service import SearchContext, search_retrieved_items
 
 
 @asynccontextmanager
@@ -73,16 +72,13 @@ async def search_endpoint(
     search_context: SearchContext = Depends(get_search_context),
 ) -> SearchResponse:
     """Search indexed chunks by semantic similarity."""
-    if search_context.store.row_count() == 0:
-        return SearchResponse(results=[])
-
-    rows = await asyncio.to_thread(
-        run_search,
+    results = await asyncio.to_thread(
+        search_retrieved_items,
         body.query,
         body.top_k,
         context=search_context,
     )
-    return SearchResponse(results=[row_to_retrieved_item(row) for row in rows])
+    return SearchResponse(results=results)
 
 
 @app.post("/ingest", response_model=IngestResponse)

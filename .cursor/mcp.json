@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "alphasearch-qwen": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${workspaceFolder}",
+        "run",
+        "alphasearch-mcp"
+      ],
+      "env": {
+        "ALPHASEARCH_EMBEDDER": "qwen",
+        "ALPHASEARCH_TABLE": "chunks",
+        "ALPHASEARCH_EMBEDDING_DIM": "2048"
+      }
+    }
+  }
+}
