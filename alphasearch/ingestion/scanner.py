@@ -12,7 +12,14 @@ IGNORED_FILENAMES = {".DS_Store"}
 
 
 def scan_data_dir(data_dir: Path) -> Iterator[SourceFile]:
-    """Yield supported source files under data_dir in stable path order."""
+    """Yield supported source files under data_dir in stable path order.
+
+    Args:
+        data_dir: Folder to scan recursively.
+
+    Yields:
+        Supported files with metadata and content hashes.
+    """
     for path in sorted(data_dir.rglob("*")):
         if not path.is_file() or path.name in IGNORED_FILENAMES:
             continue
@@ -32,4 +39,3 @@ def scan_data_dir(data_dir: Path) -> Iterator[SourceFile]:
             file_size=stat.st_size,
             file_hash=file_sha256(path),
         )
-

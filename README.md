@@ -19,6 +19,10 @@ The current MVP supports:
 alphasearch/
   data/                       # demo PDFs and images
   alphasearch/                # package code
+    ingestion/                # scanning, PDF/image chunking, ingest pipeline
+    search/                   # query search service and API response models
+    api/                      # FastAPI app for /ingest and /search
+    cli/                      # unified CLI and compatibility commands
   scripts/                    # runnable wrappers
   models/                     # optional local model snapshot, gitignored
   var/lancedb/                # generated LanceDB data, gitignored
@@ -87,36 +91,68 @@ ALPHASEARCH_MODEL_PATH=./models/Qwen3-VL-Embedding-2B
 Build or rebuild the local index:
 
 ```bash
-uv run python scripts/index_data.py --reset
+uv run alphasearch ingest ./data --reset
 ```
 
 Re-run without `--reset` to skip unchanged files. If a file has changed at the
 same relative path, stale rows are removed and the file is re-indexed:
 
 ```bash
-uv run python scripts/index_data.py
+uv run alphasearch ingest ./data
 ```
 
 For a faster smoke test:
 
 ```bash
-uv run python scripts/index_data.py --reset --limit 2
+uv run alphasearch ingest ./data --reset --limit 2
 ```
+
+## LanceDB Index
+
+After indexing `./data`, the local vector store is:
+
+```text
+URI:   ./var/lancedb
+Table: chunks
+```
+
+On this machine, that resolves to:
+
+```text
+/Users/ericliu/startups/alphasearch/var/lancedb
+```
+
+A full ingest of the bundled `./data` folder produced **600 chunks** from **25 files** in the `chunks` table.
+
+Both the CLI and API read from this LanceDB location via `ALPHASEARCH_DB_DIR` and `ALPHASEARCH_TABLE`.
 
 ## Search
 
 Search the local index:
 
 ```bash
-uv run python scripts/search.py "photos of people at an event"
-uv run python scripts/search.py "papers about memory in transformers" -k 5
+uv run alphasearch search "photos of people at an event"
+uv run alphasearch search "papers about memory in transformers" -k 5
 ```
 
 Print raw rows:
 
 ```bash
-uv run python scripts/search.py "software as content" --json
+uv run alphasearch search "software as content" --json
 ```
+
+## API
+
+Run the local HTTP API:
+
+```bash
+uv run alphasearch serve
+```
+
+The API exposes two main endpoints:
+
+- `POST /ingest` with `{"folder": "./data", "reset": false, "limit": null}`
+- `POST /search` with `{"query": "research papers about uncertainty", "top_k": 5}`
 
 ## Offline Demo Mode
 
@@ -131,8 +167,8 @@ export HF_HUB_OFFLINE=1
 Then disconnect the internet and run:
 
 ```bash
-uv run python scripts/index_data.py --reset
-uv run python scripts/search.py "research papers about uncertainty"
+uv run alphasearch ingest ./data --reset
+uv run alphasearch search "research papers about uncertainty"
 ```
 
 ## Configuration

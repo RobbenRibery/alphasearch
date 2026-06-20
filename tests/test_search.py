@@ -1,37 +1,14 @@
-"""Tests for embedding, mapping, and API layers."""
+"""Tests for mapping, search, and API layers."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-import httpx
-import pytest
 from fastapi.testclient import TestClient
 
-from alphasearch.api import app, get_search_service
-from alphasearch.config import EMBEDDING_MODEL, EMBEDDINGS_URL
-from alphasearch.embed import embed_query
-from alphasearch.mapping import cosine_similarity, file_link, row_to_retrieved_item
-from alphasearch.models import RetrievedItem
-from alphasearch.service import SearchService
-
-
-@pytest.mark.asyncio
-async def test_embed_query_posts_to_embeddings_url() -> None:
-    """Embedding requests forward to the LM Studio embeddings endpoint."""
-    mock_response = MagicMock()
-    mock_response.json.return_value = {"data": [{"embedding": [0.1, 0.2, 0.3]}]}
-    mock_response.raise_for_status.return_value = None
-
-    mock_client = AsyncMock(spec=httpx.AsyncClient)
-    mock_client.post.return_value = mock_response
-
-    vector = await embed_query(mock_client, "hello")
-
-    mock_client.post.assert_awaited_once_with(
-        EMBEDDINGS_URL,
-        json={"model": EMBEDDING_MODEL, "input": "hello"},
-        timeout=60.0,
-    )
-    assert vector == [0.1, 0.2, 0.3]
+from alphasearch.api.app import app, get_ingest_context, get_search_context
+from alphasearch.ingestion.pipeline import IngestResult
+from alphasearch.search.mapping import cosine_similarity, file_link, row_to_retrieved_item
+from alphasearch.search.service import SearchContext, search
 
 
 def test_file_link_uses_file_uri() -> None:
@@ -68,12 +45,10 @@ def test_row_to_retrieved_item_maps_fields() -> None:
     assert item.score == 0.9
 
 
-@pytest.mark.asyncio
-async def test_search_service_composes_embed_and_index() -> None:
-    """SearchService embeds the query and maps index rows."""
-    mock_http = AsyncMock(spec=httpx.AsyncClient)
-    mock_index = MagicMock()
-    mock_index.search.return_value = [
+def test_search_composes_embedder_and_store() -> None:
+    """The search function embeds the query and searches LanceDB."""
+    mock_store = MagicMock()
+    mock_store.search.return_value = [
         {
             "id": "chunk-1",
             "source_id": "source-1",
@@ -86,36 +61,47 @@ async def test_search_service_composes_embed_and_index() -> None:
             "_distance": 0.1,
         }
     ]
+    mock_embedder = MagicMock()
+    mock_embedder.embed_queries.return_value = [[0.5, 0.5]]
+    context = SearchContext(
+        settings=MagicMock(),
+        store=mock_store,
+        embedder=mock_embedder,
+    )
 
-    with patch("alphasearch.service.embed_query", new=AsyncMock(return_value=[0.5, 0.5])):
-        service = SearchService(mock_http, mock_index)
-        results = await service.search("hello", top_k=2)
+    results = search("hello", top_k=2, context=context)
 
-    mock_index.search.assert_called_once_with([0.5, 0.5], 2)
+    mock_embedder.embed_queries.assert_called_once_with(["hello"])
+    mock_store.search.assert_called_once_with([0.5, 0.5], limit=2)
     assert len(results) == 1
-    assert results[0].chunk_text == "hello world"
+    assert results[0]["chunk_text"] == "hello world"
 
 
 def test_search_endpoint_returns_results() -> None:
     """POST /search returns retrieved items."""
-    mock_service = MagicMock(spec=SearchService)
-    mock_service.search = AsyncMock(
-        return_value=[
-            RetrievedItem(
-                id="chunk-1",
-                source_id="source-1",
-                file_link="file:///tmp/docs/paper.pdf",
-                absolute_path="/tmp/docs/paper.pdf",
-                relative_path="docs/paper.pdf",
-                filename="paper.pdf",
-                chunk_text="hello world",
-                chunk_index=0,
-                page_number=3,
-                score=0.9,
-            )
-        ]
+    mock_store = MagicMock()
+    mock_store.row_count.return_value = 1
+    mock_store.search.return_value = [
+        {
+            "id": "chunk-1",
+            "source_id": "source-1",
+            "absolute_path": "/tmp/docs/paper.pdf",
+            "relative_path": "docs/paper.pdf",
+            "filename": "paper.pdf",
+            "chunk_text": "hello world",
+            "chunk_index": 0,
+            "page_number": 3,
+            "_distance": 0.1,
+        }
+    ]
+    mock_embedder = MagicMock()
+    mock_embedder.embed_queries.return_value = [[0.5, 0.5]]
+    context = SearchContext(
+        settings=MagicMock(),
+        store=mock_store,
+        embedder=mock_embedder,
     )
-    app.dependency_overrides[get_search_service] = lambda: mock_service
+    app.dependency_overrides[get_search_context] = lambda: context
 
     try:
         client = TestClient(app)
@@ -126,7 +112,46 @@ def test_search_endpoint_returns_results() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["results"][0]["filename"] == "paper.pdf"
-    mock_service.search.assert_awaited_once_with("hello", 1)
+    mock_store.search.assert_called_once_with([0.5, 0.5], limit=1)
+
+
+def test_ingest_endpoint_returns_summary() -> None:
+    """POST /ingest returns an ingestion summary."""
+    context = MagicMock()
+    app.dependency_overrides[get_ingest_context] = lambda: context
+    result = IngestResult(
+        data_dir=Path("/tmp/data"),
+        files_scanned=3,
+        files_indexed=2,
+        files_already_indexed=1,
+        chunks_inserted=5,
+    )
+
+    try:
+        with patch("alphasearch.api.app.run_ingest", return_value=result) as mock_ingest:
+            client = TestClient(app)
+            response = client.post(
+                "/ingest",
+                json={"folder": "./data", "reset": True, "limit": 2},
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "data_dir": "/tmp/data",
+        "files_scanned": 3,
+        "files_indexed": 2,
+        "files_already_indexed": 1,
+        "chunks_inserted": 5,
+    }
+    mock_ingest.assert_called_once_with(
+        "./data",
+        reset=True,
+        limit=2,
+        context=context,
+        show_progress=False,
+    )
 
 
 def test_health_endpoint() -> None:

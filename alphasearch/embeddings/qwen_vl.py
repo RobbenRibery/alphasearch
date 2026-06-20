@@ -18,17 +18,32 @@ class QwenVLEmbedder:
         instruction: str,
         embedding_dim: int = 2048,
     ) -> None:
+        """Initialize the Qwen3-VL embedder.
+
+        Args:
+            model_path: Hugging Face model id or local model directory.
+            instruction: Prompt prepended to each input before embedding.
+            embedding_dim: Expected embedding vector length.
+        """
+        import torch
         from sentence_transformers import SentenceTransformer
 
         self.model_path = model_path
         self.instruction = instruction
         self.embedding_dim = embedding_dim
-        self.model = SentenceTransformer(model_path, trust_remote_code=True)
+        self.model = SentenceTransformer(
+            model_path,
+            trust_remote_code=True,
+            device="mps",
+            model_kwargs={"torch_dtype": torch.bfloat16},
+        )
 
     def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
+        """Embed search queries."""
         return self._encode(list(queries))
 
     def embed_chunks(self, chunks: Sequence[Chunk]) -> list[list[float]]:
+        """Embed document chunks."""
         inputs: list[Any] = []
         for chunk in chunks:
             if chunk.modality == "image":
@@ -40,6 +55,7 @@ class QwenVLEmbedder:
         return self._encode(inputs)
 
     def _encode(self, inputs: Sequence[Any]) -> list[list[float]]:
+        """Encode text or multimodal inputs into normalized vectors."""
         embeddings = self.model.encode(
             list(inputs),
             prompt=self.instruction,
@@ -55,4 +71,3 @@ class QwenVLEmbedder:
                 "Update ALPHASEARCH_EMBEDDING_DIM if you intentionally changed Qwen output size."
             )
         return array.tolist()
-

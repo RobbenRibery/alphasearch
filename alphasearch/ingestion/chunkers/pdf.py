@@ -18,7 +18,16 @@ def _normalize_text(text: str) -> str:
 
 
 def _split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP_CHARS) -> list[str]:
-    """Split text into sentence-ish windows without requiring a tokenizer."""
+    """Split text into sentence-ish windows without requiring a tokenizer.
+
+    Args:
+        text: Source text extracted from a PDF page.
+        max_chars: Maximum number of characters per chunk.
+        overlap: Number of trailing characters to overlap between chunks.
+
+    Returns:
+        Normalized text chunks.
+    """
     text = _normalize_text(text)
     if not text:
         return []
@@ -50,7 +59,14 @@ def _split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP_CH
 
 
 def chunk_pdf(source: SourceFile) -> Iterator[Chunk]:
-    """Create text chunks from a PDF, keeping page numbers for UI previews."""
+    """Create text chunks from a PDF, keeping page numbers for UI previews.
+
+    Args:
+        source: PDF file metadata.
+
+    Yields:
+        Text chunks extracted from each page.
+    """
     with fitz.open(source.absolute_path) as doc:
         chunk_index = 0
         for page_index in range(doc.page_count):
@@ -74,4 +90,3 @@ def chunk_pdf(source: SourceFile) -> Iterator[Chunk]:
                     },
                 )
                 chunk_index += 1
-

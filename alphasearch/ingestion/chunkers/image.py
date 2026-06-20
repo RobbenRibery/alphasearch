@@ -16,6 +16,14 @@ except Exception:
 
 
 def _safe_exif(image: Image.Image) -> dict[str, Any]:
+    """Extract simple EXIF values safe to serialize as JSON.
+
+    Args:
+        image: Open Pillow image.
+
+    Returns:
+        EXIF fields with primitive values.
+    """
     try:
         exif = image.getexif()
     except Exception:
@@ -32,7 +40,14 @@ def _safe_exif(image: Image.Image) -> dict[str, Any]:
 
 
 def chunk_image(source: SourceFile) -> Chunk:
-    """Represent one image as one chunk for the hackathon MVP."""
+    """Represent one image as one chunk for the hackathon MVP.
+
+    Args:
+        source: Image file metadata.
+
+    Returns:
+        A single image chunk with metadata and base64-encoded bytes.
+    """
     with Image.open(source.absolute_path) as image:
         metadata = {
             "width": image.width,

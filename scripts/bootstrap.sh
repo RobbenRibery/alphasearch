@@ -16,5 +16,5 @@ echo "Next:"
 echo "  uv run python scripts/download_model.py"
 echo "  cp .env.example .env"
 echo "  # edit .env and set ALPHASEARCH_MODEL_PATH=./models/Qwen3-VL-Embedding-2B"
-echo "  uv run python scripts/index_data.py --reset"
+echo "  uv run alphasearch ingest ./data --reset"
 

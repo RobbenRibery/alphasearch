@@ -1,4 +1,4 @@
-"""Domain and API models for alphasearch."""
+"""API models for AlphaSearch ingestion and search endpoints."""
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -35,3 +35,25 @@ class SearchResponse(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     results: list[RetrievedItem]
+
+
+class IngestRequest(BaseModel):
+    """Request body for indexing a folder."""
+
+    model_config = ConfigDict(frozen=True)
+
+    folder: str = Field(min_length=1)
+    reset: bool = False
+    limit: int | None = Field(default=None, ge=1)
+
+
+class IngestResponse(BaseModel):
+    """Response body for an ingestion run."""
+
+    model_config = ConfigDict(frozen=True)
+
+    data_dir: str
+    files_scanned: int
+    files_indexed: int
+    files_already_indexed: int
+    chunks_inserted: int

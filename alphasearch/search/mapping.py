@@ -1,23 +1,44 @@
-"""Map LanceDB rows to domain models."""
+"""Map LanceDB rows to API response models."""
 
 from pathlib import Path
 from typing import Any
 
-from alphasearch.models import RetrievedItem
+from alphasearch.search.models import RetrievedItem
 
 
 def file_link(absolute_path: str) -> str:
-    """Build a file URI for the original source file."""
+    """Build a file URI for the original source file.
+
+    Args:
+        absolute_path: Absolute path to the original source file.
+
+    Returns:
+        A file URI for opening the local file.
+    """
     return Path(absolute_path).resolve().as_uri()
 
 
 def cosine_similarity(distance: float) -> float:
-    """Convert LanceDB cosine distance to similarity."""
+    """Convert LanceDB cosine distance to similarity.
+
+    Args:
+        distance: Cosine distance returned by LanceDB.
+
+    Returns:
+        Cosine similarity, where larger values are more similar.
+    """
     return 1.0 - distance
 
 
 def row_to_retrieved_item(row: dict[str, Any]) -> RetrievedItem:
-    """Map a LanceDB search row to a retrieved item."""
+    """Map a LanceDB search row to a retrieved item.
+
+    Args:
+        row: LanceDB row containing chunk metadata and `_distance`.
+
+    Returns:
+        API response item with a file link and similarity score.
+    """
     absolute_path = str(row["absolute_path"])
     return RetrievedItem(
         id=str(row["id"]),
