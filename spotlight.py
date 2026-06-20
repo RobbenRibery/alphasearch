@@ -64,7 +64,6 @@ from AppKit import (
     NSView,
     NSWindowCollectionBehaviorCanJoinAllSpaces,
     NSWindowCollectionBehaviorFullScreenAuxiliary,
-    NSWindowCollectionBehaviorMoveToActiveSpace,
     NSWindowStyleMaskBorderless,
 )
 from Foundation import NSObject, NSTimer
@@ -245,7 +244,6 @@ class Controller(NSObject):
         self.win.setDelegate_(self)
         self.win.setCollectionBehavior_(
             NSWindowCollectionBehaviorCanJoinAllSpaces
-            | NSWindowCollectionBehaviorMoveToActiveSpace
             | NSWindowCollectionBehaviorFullScreenAuxiliary
         )
 
