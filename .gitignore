@@ -2,6 +2,10 @@
 __pycache__/
 *.py[codz]
 *$py.class
+.DS_Store
+
+# Large local artifacts
+models/
 
 # C extensions
 *.so

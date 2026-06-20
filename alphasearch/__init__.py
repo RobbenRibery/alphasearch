@@ -1,0 +1,6 @@
+"""AlphaSearch offline indexing and search package."""
+
+__all__ = ["__version__"]
+
+__version__ = "0.1.0"
+

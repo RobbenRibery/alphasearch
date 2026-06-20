@@ -1,0 +1,36 @@
+[project]
+name = "alphasearch"
+version = "0.1.0"
+description = "Offline local multimodal search over PDFs and images with LanceDB."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "accelerate>=1.2.0",
+  "einops>=0.8.0",
+  "huggingface-hub>=0.27.0",
+  "lancedb>=0.25.0",
+  "numpy>=2.0.0",
+  "pillow>=11.0.0",
+  "pillow-heif>=0.21.0",
+  "pyarrow>=18.0.0",
+  "pymupdf>=1.25.0",
+  "python-dotenv>=1.0.1",
+  "qwen-vl-utils>=0.0.14",
+  "sentence-transformers>=5.0.0",
+  "torch>=2.8.0",
+  "tqdm>=4.67.0",
+  "transformers>=4.57.0",
+]
+
+[project.scripts]
+alphasearch-index = "alphasearch.cli.index_data:main"
+alphasearch-search = "alphasearch.cli.search:main"
+alphasearch-reset = "alphasearch.cli.reset_index:main"
+alphasearch-download-model = "alphasearch.cli.download_model:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+package = true
