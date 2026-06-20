@@ -26,12 +26,10 @@ def print_search_results(results: list[dict[str, Any]], *, as_json: bool = False
         distance = row.get("_distance")
         score = f"{distance:.4f}" if isinstance(distance, float) else "n/a"
         page = f" page {row['page_number']}" if row.get("page_number") is not None else ""
-        print(f"{index}. {row['relative_path']}{page} [{row['modality']}] distance={score}")
+        print(f"{index}. {row['absolute_path']}{page} [{row['modality']}] distance={score}")
         snippet = preview_text(row.get("chunk_text"))
         if snippet:
             print(f"   {snippet}")
-        else:
-            print(f"   {row['absolute_path']}")
 
 
 def run_search_cli(query: str, *, limit: int = 8, as_json: bool = False) -> list[dict[str, Any]]:
