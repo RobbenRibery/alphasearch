@@ -28,18 +28,24 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from PIL import Image
 
 import engine
+from integrations import captur, cognee
 
 PORT = 8765
 app = FastAPI(title="Localhost Search")
 
 _index = None
+_index_mtime = 0.0
 _allowed_root = None
 
 
 def get_index():
-    global _index, _allowed_root
-    if _index is None:
+    """Load the index, auto-reloading if the watcher has updated it on disk."""
+    global _index, _index_mtime, _allowed_root
+    info = Path(engine.DEFAULT_INDEX_DIR) / "index_info.json"
+    disk_mtime = info.stat().st_mtime if info.exists() else 0.0
+    if _index is None or disk_mtime > _index_mtime:
         _index = engine.SearchIndex(engine.DEFAULT_INDEX_DIR)
+        _index_mtime = disk_mtime
         try:
             _allowed_root = str(Path(_index.info["root"]).resolve())
         except Exception:
@@ -81,6 +87,10 @@ def api_search(q: str = "", k: int = 9):
     idx = get_index()
     imgs = idx.search_images(q, k=k)
     txts = idx.search_texts(q, k=5)
+    # Cognee integration: write the search to persistent on-device memory so the
+    # agent can recall/learn across sessions (falls back to a local JSON store).
+    top = imgs[0] if imgs else (txts[0] if txts else None)
+    cognee.remember(q, top["path"] if top else None, top["score"] if top else None)
     return {
         "images": [
             {
@@ -141,6 +151,20 @@ def reveal_file(payload: dict):
         raise HTTPException(404)
     subprocess.run(["open", "-R", path], check=False)
     return {"ok": True}
+
+
+@app.get("/trust")
+def trust(path: str):
+    """Captur integration: on-device photo trust/quality score for a result."""
+    if not _is_allowed(path):
+        raise HTTPException(404)
+    return {**captur.validate_image(path), "captur_sdk": captur.available()}
+
+
+@app.get("/memory")
+def memory(k: int = 20):
+    """Cognee integration: recent search memory (cross-session)."""
+    return {"cognee_sdk": cognee.available(), "recent": cognee.recent(k)}
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -49,7 +49,7 @@ from AppKit import (
     NSView,
     NSWindowStyleMaskBorderless,
 )
-from Foundation import NSObject, NSTimer
+from Foundation import NSData, NSObject, NSTimer
 
 SERVICE_URL = "http://localhost:8765"
 W, H = 720, 540
@@ -188,8 +188,19 @@ class Controller(NSObject):
         self.results.addSubview_(_label(msg, NSMakeRect(24, 20, W - 48, 24), MUTED, 14))
 
     @objc.python_method
+    def _load_image(self, path, size):
+        """Fetch a thumbnail from the service so we don't need file access here."""
+        try:
+            url = SERVICE_URL + f"/thumb?size={size}&path=" + urllib.parse.quote(path)
+            raw = urllib.request.urlopen(url, timeout=3).read()
+            data = NSData.dataWithBytes_length_(raw, len(raw))
+            return NSImage.alloc().initWithData_(data)
+        except Exception:
+            return NSImage.alloc().initWithContentsOfFile_(path)  # fallback
+
+    @objc.python_method
     def _add_image(self, path, frame, tag, radius=10.0):
-        img = NSImage.alloc().initWithContentsOfFile_(path)
+        img = self._load_image(path, int(max(frame.size.width, frame.size.height) * 2))
         if img is None:
             return None
         iv = NSImageView.alloc().initWithFrame_(frame)

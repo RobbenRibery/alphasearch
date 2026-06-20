@@ -1,7 +1,6 @@
 torch
 torchvision
 sentence-transformers
-streamlit
 pillow
 pillow-heif
 faiss-cpu

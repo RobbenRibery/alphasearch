@@ -25,21 +25,32 @@ python -c "import engine; engine.get_clip(); engine.get_text_model()"
 ## Run
 ```bash
 source .venv/bin/activate
-streamlit run app.py
+python index.py /path/to/photos     # 1. build the index
+python service.py                   # 2. start the always-on search service
+python spotlight.py                 # 3. native Spotlight-style overlay (optional)
 ```
-1. In the sidebar, set the folder to index (e.g. a demo photo folder).
-2. Click **Build / rebuild index**.
-3. Search.
-
-CLI alternative:
-```bash
-python index.py /path/to/photos     # build index
-```
+The two front-ends are the **Spotlight-style overlay** (`spotlight.py`, native,
+no browser) and the service's **live web UI** at http://localhost:8765.
 
 ## Offline demo
 - Keep **Offline mode** toggle ON (sets `HF_HUB_OFFLINE=1`).
 - For the dramatic version: literally turn off Wi-Fi before searching.
 - Make sure `ollama serve` is running locally (it runs offline).
+
+## Auto-indexing (incremental, live)
+Keep an index continuously up to date as files appear/change/disappear:
+
+```bash
+source .venv/bin/activate
+python watch.py              # watches ~/Desktop (recursively) by default
+python watch.py ~/Pictures   # or any folder
+```
+
+- Initial pass indexes everything; afterwards only **new/changed** files are
+  embedded (incremental), and deleted files are dropped — within ~2s of a change.
+- The running `service.py` auto-reloads the updated index, so new files become
+  searchable immediately (no restart).
+- First run may prompt macOS to allow access to the Desktop folder — click Allow.
 
 ## Spotlight-style overlay (recommended) — native, no browser
 A borderless floating search bar that appears on a global hotkey, searches live
@@ -82,7 +93,7 @@ python menubar.py
 ```
 - A 🔎 icon appears in the menu bar.
 - Press **Ctrl + Option + Space** from any app → type your query → Enter.
-- Results open in the Streamlit page (`?q=...` pre-fills and runs the search).
+- Results open in the service web UI at http://localhost:8765.
 - The menu also has: Search…, Open results page, Rebuild index, Start server, Quit.
 
 **One-time permission for the global hotkey:** macOS must trust the app that
@@ -92,11 +103,24 @@ and restart the app. (The "Search…" menu item works even without this.)
 
 For daily use, run it from Terminal so it keeps running after you close the IDE.
 
+## Track-partner integrations (Captur & Cognee)
+Adapters in `integrations/` show exactly where two partner tools plug in — and
+they run live today via local stand-ins (one-function swap to the real SDKs):
+
+- **Captur** (on-device photo trust): `GET /trust?path=...` scores a photo's
+  quality/authenticity so the index/results stay clean.
+- **Cognee** (on-device memory): every search is written to persistent memory;
+  see `GET /memory`. Cognee upgrades this flat log into a semantic memory graph.
+
+See [`INTEGRATIONS.md`](INTEGRATIONS.md) for the full design + demo talking points.
+
 ## Files
 - `engine.py` — embeddings, indexing, search (the core).
 - `index.py` — CLI indexer.
 - `agent.py` — Ollama routing + vision explanations.
-- `app.py` — Streamlit UI (reads `?q=` for the hotkey hand-off).
-- `menubar.py` — menu-bar launcher + global hotkey (the "search bar").
+- `service.py` — always-on warm service + live web UI + `/trust` + `/memory`.
+- `spotlight.py` — native macOS Spotlight-style overlay (the "search bar").
+- `menubar.py` — menu-bar launcher + global hotkey.
 - `search_open.py` — find best match for a query and open the file directly
   (call from a macOS Shortcut for a no-permission global hotkey).
+- `integrations/` — Captur + Cognee adapters (see `INTEGRATIONS.md`).

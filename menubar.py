@@ -36,28 +36,28 @@ except Exception:
 from pynput import keyboard
 
 PROJECT_DIR = Path(__file__).resolve().parent
-STREAMLIT_PORT = 8502
-STREAMLIT_URL = f"http://localhost:{STREAMLIT_PORT}"
+SERVICE_PORT = 8765
+SERVICE_URL = f"http://localhost:{SERVICE_PORT}"
 HOTKEY = "<ctrl>+<alt>+<space>"
-DEFAULT_FOLDER = str(Path.home() / "Documents" / "demo_files")
+DEFAULT_FOLDER = str(Path.home() / "Desktop")
 
 
 def _server_up() -> bool:
     try:
-        urllib.request.urlopen(STREAMLIT_URL, timeout=0.5)
+        urllib.request.urlopen(SERVICE_URL, timeout=0.5)
         return True
     except Exception:
         return False
 
 
 def _start_server():
-    """Launch the Streamlit results UI if it isn't already running."""
+    """Launch the always-on search service if it isn't already running."""
     if _server_up():
         return
     env_prefix = (
         f'cd "{PROJECT_DIR}" && source .venv/bin/activate && '
         "export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 && "
-        f"streamlit run app.py --server.headless true --server.port {STREAMLIT_PORT}"
+        "python service.py"
     )
     subprocess.Popen(["/bin/zsh", "-lc", env_prefix],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -71,7 +71,7 @@ class SearchBarApp(rumps.App):
             rumps.MenuItem("Open results page", callback=self.open_results),
             None,
             rumps.MenuItem("Rebuild index", callback=self.rebuild),
-            rumps.MenuItem(f"Start server (:{STREAMLIT_PORT})", callback=self.start_server),
+            rumps.MenuItem(f"Start server (:{SERVICE_PORT})", callback=self.start_server),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app),
         ]
@@ -105,16 +105,16 @@ class SearchBarApp(rumps.App):
         if resp.clicked and resp.text.strip():
             q = urllib.parse.quote(resp.text.strip())
             _start_server()
-            webbrowser.open(f"{STREAMLIT_URL}/?q={q}")
+            webbrowser.open(f"{SERVICE_URL}/?q={q}")
 
     def open_results(self, _):
         _start_server()
-        webbrowser.open(STREAMLIT_URL)
+        webbrowser.open(SERVICE_URL)
 
     def start_server(self, _):
         _start_server()
         rumps.notification("Localhost Search", "", "Starting server on "
-                           f"port {STREAMLIT_PORT}…")
+                           f"port {SERVICE_PORT}…")
 
     def rebuild(self, _):
         cmd = (
