@@ -14,7 +14,7 @@ def print_ingest_result(result: IngestResult) -> None:
     """
     settings = load_settings()
     print(f"Data dir: {result.data_dir}")
-    print(f"LanceDB: {settings.db_dir} table={settings.table_name}")
+    print(f"LanceDB: {settings.db_dir} table={settings.table_name} embedder={settings.embedder}")
     print(f"Supported files: {result.files_scanned}")
     print(f"Already indexed files: {result.files_already_indexed}")
     print(f"Files to index: {result.files_indexed}")

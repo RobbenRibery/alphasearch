@@ -5,7 +5,7 @@ from typing import Any
 
 from alphasearch.config import Settings, load_settings
 from alphasearch.db import LanceDBStore
-from alphasearch.embeddings import QwenVLEmbedder
+from alphasearch.embeddings import Embedder, create_embedder
 
 
 @dataclass(frozen=True)
@@ -14,7 +14,7 @@ class SearchContext:
 
     settings: Settings
     store: LanceDBStore
-    embedder: QwenVLEmbedder
+    embedder: Embedder
 
 
 def create_search_context(settings: Settings | None = None) -> SearchContext:
@@ -34,11 +34,7 @@ def create_search_context(settings: Settings | None = None) -> SearchContext:
             resolved_settings.table_name,
             resolved_settings.embedding_dim,
         ),
-        embedder=QwenVLEmbedder(
-            model_path=resolved_settings.model_path,
-            instruction=resolved_settings.embedding_instruction,
-            embedding_dim=resolved_settings.embedding_dim,
-        ),
+        embedder=create_embedder(resolved_settings),
     )
 
 

@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI, Request
 
 from alphasearch.config import load_settings
 from alphasearch.db import LanceDBStore
-from alphasearch.embeddings import QwenVLEmbedder
+from alphasearch.embeddings import create_embedder
 from alphasearch.ingestion.pipeline import IngestContext, ingest as run_ingest
 from alphasearch.search.mapping import row_to_retrieved_item
 from alphasearch.search.models import (
@@ -34,11 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """
     settings = load_settings()
     store = LanceDBStore(settings.db_dir, settings.table_name, settings.embedding_dim)
-    embedder = QwenVLEmbedder(
-        model_path=settings.model_path,
-        instruction=settings.embedding_instruction,
-        embedding_dim=settings.embedding_dim,
-    )
+    embedder = create_embedder(settings)
     app.state.search_context = SearchContext(settings=settings, store=store, embedder=embedder)
     app.state.ingest_context = IngestContext(settings=settings, store=store, embedder=embedder)
     yield

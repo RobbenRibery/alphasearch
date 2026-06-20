@@ -5,43 +5,43 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+from PIL import Image
 
 from alphasearch.models import Chunk
 
 
-class QwenVLEmbedder:
-    """Thin wrapper around Qwen3-VL-Embedding via SentenceTransformers."""
+class CLIPEmbedder:
+    """Thin wrapper around CLIP via SentenceTransformers."""
+
+    DEFAULT_MODEL_PATH = "sentence-transformers/clip-ViT-B-32"
+    DEFAULT_EMBEDDING_DIM = 512
 
     def __init__(
         self,
         model_path: str,
-        instruction: str,
-        embedding_dim: int = 2048,
+        embedding_dim: int = DEFAULT_EMBEDDING_DIM,
     ) -> None:
-        """Initialize the Qwen3-VL embedder.
+        """Initialize the CLIP embedder.
 
         Args:
             model_path: Hugging Face model id or local model directory.
-            instruction: Prompt prepended to each input before embedding.
             embedding_dim: Expected embedding vector length.
         """
         import torch
         from sentence_transformers import SentenceTransformer
 
         self.model_path = model_path
-        self.instruction = instruction
         self.embedding_dim = embedding_dim
         self.model = SentenceTransformer(
             model_path,
-            trust_remote_code=True,
             device="mps",
-            model_kwargs={"torch_dtype": torch.bfloat16},
+            model_kwargs={"torch_dtype": torch.float16},
         )
 
     @property
     def embedding_instruction(self) -> str:
         """Return the instruction prompt used during indexing."""
-        return self.instruction
+        return ""
 
     def embed_queries(self, queries: Sequence[str]) -> list[list[float]]:
         """Embed search queries."""
@@ -52,18 +52,17 @@ class QwenVLEmbedder:
         inputs: list[Any] = []
         for chunk in chunks:
             if chunk.modality == "image":
-                inputs.append({"image": str(Path(chunk.source.absolute_path))})
+                inputs.append(_load_image(Path(chunk.source.absolute_path)))
             elif chunk.chunk_text:
-                inputs.append({"text": chunk.chunk_text})
+                inputs.append(chunk.chunk_text)
             else:
-                inputs.append({"text": ""})
+                inputs.append("")
         return self._encode(inputs)
 
     def _encode(self, inputs: Sequence[Any]) -> list[list[float]]:
-        """Encode text or multimodal inputs into normalized vectors."""
+        """Encode text or image inputs into normalized vectors."""
         embeddings = self.model.encode(
             list(inputs),
-            prompt=self.instruction,
             normalize_embeddings=True,
             show_progress_bar=False,
         )
@@ -73,6 +72,12 @@ class QwenVLEmbedder:
         if array.shape[1] != self.embedding_dim:
             raise ValueError(
                 f"Expected {self.embedding_dim}-d embeddings, got {array.shape[1]}. "
-                "Update ALPHASEARCH_EMBEDDING_DIM if you intentionally changed Qwen output size."
+                "Update ALPHASEARCH_EMBEDDING_DIM if you intentionally changed CLIP output size."
             )
         return array.tolist()
+
+
+def _load_image(path: Path) -> Image.Image:
+    """Load an image from disk and return an independent RGB copy."""
+    with Image.open(path) as image:
+        return image.convert("RGB").copy()

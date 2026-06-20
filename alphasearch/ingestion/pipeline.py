@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from alphasearch.config import Settings, load_settings
 from alphasearch.db import LanceDBStore
-from alphasearch.embeddings import QwenVLEmbedder
+from alphasearch.embeddings import Embedder, create_embedder
 from alphasearch.ingestion.chunkers import chunk_source_file
 from alphasearch.ingestion.scanner import scan_data_dir
 from alphasearch.models import Chunk
@@ -31,7 +31,7 @@ class IngestContext:
 
     settings: Settings
     store: LanceDBStore
-    embedder: QwenVLEmbedder
+    embedder: Embedder
 
 
 def create_ingest_context(settings: Settings | None = None) -> IngestContext:
@@ -51,11 +51,7 @@ def create_ingest_context(settings: Settings | None = None) -> IngestContext:
             resolved_settings.table_name,
             resolved_settings.embedding_dim,
         ),
-        embedder=QwenVLEmbedder(
-            model_path=resolved_settings.model_path,
-            instruction=resolved_settings.embedding_instruction,
-            embedding_dim=resolved_settings.embedding_dim,
-        ),
+        embedder=create_embedder(resolved_settings),
     )
 
 
@@ -123,15 +119,7 @@ def ingest(
             chunks_inserted=inserted,
         )
 
-    embedder = (
-        QwenVLEmbedder(
-            model_path=settings.model_path,
-            instruction=settings.embedding_instruction,
-            embedding_dim=settings.embedding_dim,
-        )
-        if context is None
-        else context.embedder
-    )
+    embedder = create_embedder(settings) if context is None else context.embedder
 
     progress = tqdm(
         pending_sources,
@@ -152,8 +140,8 @@ def ingest(
             inserted += store.add_chunks(
                 chunks=batch,
                 vectors=vectors,
-                embedding_model=settings.model_path,
-                embedding_instruction=settings.embedding_instruction,
+                embedding_model=embedder.model_path,
+                embedding_instruction=embedder.embedding_instruction,
             )
         if show_progress:
             progress.set_postfix(chunks=inserted, refresh=False)

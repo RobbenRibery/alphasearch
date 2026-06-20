@@ -6,7 +6,7 @@ from typing import Any
 
 from alphasearch.config import load_settings
 from alphasearch.db import LanceDBStore
-from alphasearch.embeddings import QwenVLEmbedder
+from alphasearch.embeddings import create_embedder
 from alphasearch.search.service import SearchContext, search
 from alphasearch.utils.formatting import preview_text
 
@@ -51,11 +51,7 @@ def run_search_cli(query: str, *, limit: int = 8, as_json: bool = False) -> list
         print("The index is empty. Run: uv run alphasearch ingest ./data --reset")
         return []
 
-    embedder = QwenVLEmbedder(
-        model_path=settings.model_path,
-        instruction=settings.embedding_instruction,
-        embedding_dim=settings.embedding_dim,
-    )
+    embedder = create_embedder(settings)
     context = SearchContext(settings=settings, store=store, embedder=embedder)
     results = search(query, top_k=limit, context=context)
     print_search_results(results, as_json=as_json)
