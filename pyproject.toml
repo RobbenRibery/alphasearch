@@ -9,6 +9,7 @@ dependencies = [
   "fastapi>=0.138.0",
   "huggingface-hub>=0.27.0",
   "lancedb>=0.25.0",
+  "mcp>=1.28.0",
   "numpy>=2.0.0",
   "pillow>=11.0.0",
   "pillow-heif>=0.21.0",
@@ -32,6 +33,7 @@ alphasearch-search = "alphasearch.cli.search:main"
 alphasearch-serve = "alphasearch.api.app:main"
 alphasearch-reset = "alphasearch.cli.reset_index:main"
 alphasearch-download-model = "alphasearch.cli.download_model:main"
+alphasearch-mcp = "alphasearch.mcp.server:main"
 
 [build-system]
 requires = ["hatchling"]

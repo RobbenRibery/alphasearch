@@ -119,3 +119,44 @@ def load_settings() -> Settings:
         ),
         offline=offline,
     )
+
+
+def load_qwen_settings() -> Settings:
+    """Load settings pinned to the Qwen embedder and LanceDB index.
+
+    Returns:
+        Settings for searching the Qwen ``chunks`` table regardless of
+        ``ALPHASEARCH_EMBEDDER`` defaults used elsewhere.
+    """
+    settings = load_settings()
+    defaults = QWEN_DEFAULTS
+    model_path = _resolve_model_path(
+        os.getenv(
+            "ALPHASEARCH_QWEN_MODEL_PATH",
+            os.getenv("ALPHASEARCH_MODEL_PATH", str(defaults["model_path"])),
+        ),
+        settings.root_dir,
+    )
+    return Settings(
+        root_dir=settings.root_dir,
+        data_dir=settings.data_dir,
+        db_dir=settings.db_dir,
+        embedder="qwen",
+        table_name=os.getenv("ALPHASEARCH_QWEN_TABLE", str(defaults["table_name"])),
+        model_path=model_path,
+        embedding_dim=int(
+            os.getenv(
+                "ALPHASEARCH_QWEN_EMBEDDING_DIM",
+                os.getenv("ALPHASEARCH_EMBEDDING_DIM", str(defaults["embedding_dim"])),
+            )
+        ),
+        batch_size=settings.batch_size,
+        embedding_instruction=os.getenv(
+            "ALPHASEARCH_QWEN_EMBEDDING_INSTRUCTION",
+            os.getenv(
+                "ALPHASEARCH_EMBEDDING_INSTRUCTION",
+                str(defaults["embedding_instruction"]),
+            ),
+        ),
+        offline=settings.offline,
+    )
